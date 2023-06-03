@@ -69,7 +69,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     count = 0
     while True:
         count = count + 1
-        if count % 100 == 0:
+        if count % 1000 == 0:
             print(count, "spots filtered")
         data = s.recv(1024).decode().strip()
         if not data:
