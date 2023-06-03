@@ -83,4 +83,4 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             tup = (m.group(4), m.group(2),)
             if recently_seen.is_seen(tup):
                 continue
-            print(f"{m.group(4):<9s}{m.group(2):>8}  {found['name']} {found['type']} {found['location']}")
+            print(f"{m.group(4):<9s}{m.group(2):>8}  {found['name']} {found['type']} {found['location']}  (spotted by {m.group(1)})")
