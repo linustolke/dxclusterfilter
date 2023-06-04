@@ -11,14 +11,15 @@ class Interesting(object):
         with open("ships.csv", newline="") as csvfile:
             reader = csv.reader(csvfile, delimiter=',', quotechar='"')
             for row in reader:
-                print("Showing", row)
                 call = row[0].strip()
-                self.ships[call] = ({
+                entry = ({
                     "callsign":call,
                     "name":row[1].strip(),
                     "type": row[2].strip(),
                     "location": row[3].strip(),
                 })
+                self.ships[call] = entry
+                print("Showing", call, entry["name"])
 
     def call(self, call):
         if call in self.ships:
@@ -60,21 +61,48 @@ CALL = 'SM5OUU'
 recently_seen = RecentlySeen()
 interesting = Interesting()
 
+class Reader(object):
+    def __init__(self, stream):
+        self.buffer = ''
+        self.stream = stream
+
+    def readline(self):
+        while True:
+            end_of_line = self.buffer.find('\n')
+            if end_of_line >= 0:
+                first_line = self.buffer[0:end_of_line]
+                self.buffer = self.buffer[end_of_line + 1:]
+                return first_line
+            chunk = self.stream.recv(2048)
+            if not chunk:
+                return None
+            self.buffer += chunk.decode()
+
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     s.connect((HOST, PORT))
-    data = s.recv(1024).decode()
-    print('Connected', data)
-    print(CALL)
+    reader = Reader(s)
+    print(reader.readline())
     s.sendall(CALL.encode() + b'\r\n')
+    print(reader.readline())
+    s.sendall(b'set/raw\r\n')
     count = 0
     while True:
+        data = reader.readline()
+        if data == None:
+            break
         count = count + 1
         if count % 1000 == 0:
             print(count, "spots filtered")
-        data = s.recv(1024).decode().strip()
-        if not data:
-            break
-        m = re.match(r"DX de ([^:]*):[ \t][ \t]*([1-9][0-9]*(.[0-9][0-9]*)?)[ \t][ \t]*([^ ]*)  *.*$",
+        REGEXP_PART1 = r"DX de ([^:]*):\s+"
+        REGEXP_PART2 = r"([0-9]+(.[0-9]+)?)\s+"
+        REGEXP_PART3 = r"([^ ]+)\s+"
+        REGEXP_PART4 = r"CW\s+"
+        REGEXP_PART5 = r"-?[1-9][0-9]*\s+dB\s+"
+        REGEXP_PART6 = r"[1-9][0-9]*\s+WPM\s+"
+        REGEXP_PART7 = r"(BEACON|CQ|DX|NCDXF B)\s+([0-9]*Z).*$"
+        m = re.match(REGEXP_PART1 + REGEXP_PART2 + REGEXP_PART3 +
+                     REGEXP_PART4 + REGEXP_PART5 + REGEXP_PART6 +
+                     REGEXP_PART7,
                      data)
         if m:
             found = interesting.call(m.group(4))
@@ -83,4 +111,35 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             tup = (m.group(4), m.group(2),)
             if recently_seen.is_seen(tup):
                 continue
-            print(f"{m.group(4):<9s}{m.group(2):>8}  {found['name']} {found['type']} {found['location']}  (spotted by {m.group(1)})")
+            print(f"{m.group(6):<6}{m.group(4):<9s}{m.group(2):>8}  {found['name']} {found['type']} {found['location']}  (spotted by {m.group(1)})")
+        else:
+            print("Not parsed", data)
+            m = re.match(REGEXP_PART1,
+                         data)
+            if m:
+                print("DEBUG:","match 1", m.group(0))
+                m = re.match(REGEXP_PART1 + REGEXP_PART2,
+                             data)
+                if m:
+                    print("DEBUG:","match 2", m.group(0))
+                    m = re.match(REGEXP_PART1 + REGEXP_PART2 + REGEXP_PART3,
+                                 data)
+                    if m:
+                        print("DEBUG:","match 3", m.group(0))
+                        m = re.match(REGEXP_PART1 + REGEXP_PART2 +
+                                     REGEXP_PART3 + REGEXP_PART4,
+                                     data)
+                        if m:
+                            print("DEBUG:","match 4", m.group(0))
+                            m = re.match(REGEXP_PART1 + REGEXP_PART2 +
+                                         REGEXP_PART3 + REGEXP_PART4 +
+                                         REGEXP_PART5,
+                                         data)
+                            if m:
+                                print("DEBUG:","match 5", m.group(0))
+                                m = re.match(REGEXP_PART1 + REGEXP_PART2 +
+                                             REGEXP_PART3 + REGEXP_PART4 +
+                                             REGEXP_PART5 + REGEXP_PART6,
+                                             data)
+                                if m:
+                                    print("DEBUG:","match 6", m.group(0))
