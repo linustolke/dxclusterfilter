@@ -12,24 +12,20 @@ class Interesting(object):
             reader = csv.reader(csvfile, delimiter=',', quotechar='"')
             for row in reader:
                 call = row[0].strip()
-                entry = ({
-                    "callsign":call,
-                    "name":row[1].strip(),
-                    "type": row[2].strip(),
-                    "location": row[3].strip(),
-                })
-                self.ships[call] = entry
-                print("Showing", call, entry["name"])
+                call = call.split(" ")[0]
+                if call:
+                    entry = ({
+                        "callsign":call,
+                        "name":row[1].strip() + " " + row[2].strip(),
+                        "type": row[3].strip(),
+                        "location": row[4].strip(),
+                    })
+                    self.ships[call] = entry
+                    print("Showing", call, entry["name"])
 
     def call(self, call):
         if call in self.ships:
             return self.ships[call]
-        # return {
-        #     "callsign":call,
-        #     "name":"Spotted station " + call,
-        #     "type":"Spot",
-        #     "location":"reverse beacon network",
-        # }
         return None
 
 class RecentlySeen(object):
