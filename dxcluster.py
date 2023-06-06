@@ -42,9 +42,7 @@ class Spot(object):
 
     def __init__(self, spotter, freq, dx, mode, speed_unit, t, time):
         self.spotter = spotter
-        "Spotter"
         self.freq = freq
-        "Freq"
         self.dx = dx
         self.mode = mode
         self.speed_unit = speed_unit
