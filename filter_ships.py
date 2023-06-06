@@ -92,9 +92,9 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         REGEXP_PART1 = r"DX de ([^:]*):\s+"
         REGEXP_PART2 = r"([0-9]+(.[0-9]+)?)\s+"
         REGEXP_PART3 = r"([^ ]+)\s+"
-        REGEXP_PART4 = r"(CW|PSK31)\s+"
+        REGEXP_PART4 = r"(CW|PSK31|PSK63|RTTY)\s+"
         REGEXP_PART5 = r"-?[0-9]*\s+dB\s+"
-        REGEXP_PART6 = r"[1-9][0-9]*\s+WPM\s+"
+        REGEXP_PART6 = r"[1-9][0-9]*\s+(WPM|BPS)\s+"
         REGEXP_PART7 = r"(BEACON|CQ|DX|NCDXF B)\s+([0-9]*Z).*$"
         m = re.match(REGEXP_PART1 + REGEXP_PART2 + REGEXP_PART3 +
                      REGEXP_PART4 + REGEXP_PART5 + REGEXP_PART6 +
@@ -107,7 +107,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             tup = (m.group(4), m.group(2),)
             if recently_seen.is_seen(tup):
                 continue
-            print(f"{m.group(7):<6}{m.group(4):<9s}{m.group(2):>8}  {found['name']} {found['type']} {found['location']}  (spotted by {m.group(1)})")
+            print(f"{m.group(8):<6}{m.group(4):<9s}{m.group(2):>8}  {found['name']} {found['type']} {found['location']}  (spotted by {m.group(1)})")
         else:
             print("Not parsed", data)
             m = re.match(REGEXP_PART1,
