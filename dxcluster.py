@@ -1,7 +1,15 @@
+"""Methods for getting information from DX-cluster.
+
+Currently only tested with rbn.telegraphy.de 7000 (i.e. the Reverse
+Beacon Network)
+
+"""
+
 import re
 import socket
 
-class Reader(object):
+
+class _Reader(object):
     def __init__(self, stream):
         self.buffer = ''
         self.stream = stream
@@ -18,26 +26,43 @@ class Reader(object):
                 return None
             self.buffer += chunk.decode()
 
+
 class Spot(object):
-    def __init__(self, spotter, freq, dx, mode, speed, t, time):
+    """This is a spot as returned from spots.
+
+    The fields of the class are:
+    spotter - the call of the spotter
+    frequency (a float)
+    dx - the call spotted
+    mode - the mode
+    speed_unit - the unit of the speed, either WPM or BD
+    type - the type of the spot, CQ, BEACON, ...
+    time - the time of the spot. Four digits and a Z
+    """
+
+    def __init__(self, spotter, freq, dx, mode, speed_unit, t, time):
         self.spotter = spotter
+        "Spotter"
         self.freq = freq
+        "Freq"
         self.dx = dx
         self.mode = mode
-        self.speed = speed
+        self.speed_unit = speed_unit
         self.type = t
         self.time = time
 
 
 def spots(call, address):
     """Yields spots from the DX cluster.
-    CALL is the call given when logging in to the DX cluster.
-    ADDRESS is given to socket.socket.connect
+
+    Arguments:
+    The call given when logging in to the DX cluster.
+    The address is given to socket.socket.connect
     """
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.connect(address)
 
-        reader = Reader(s)
+        reader = _Reader(s)
         print(reader.readline())
         s.sendall(call.encode() + b'\r\n')
         print(reader.readline())
@@ -45,7 +70,7 @@ def spots(call, address):
         count = 0
         while True:
             data = reader.readline()
-            if data == None:
+            if data is None:
                 break
             count = count + 1
             if count % 1000 == 0:
@@ -69,29 +94,30 @@ def spots(call, address):
                 m = re.match(REGEXP_PART1,
                              data)
                 if m:
-                    print("DEBUG:","match 1", m.group(0))
+                    print("DEBUG:", "match 1", m.group(0))
                     m = re.match(REGEXP_PART1 + REGEXP_PART2,
                                  data)
                     if m:
-                        print("DEBUG:","match 2", m.group(0))
-                        m = re.match(REGEXP_PART1 + REGEXP_PART2 + REGEXP_PART3,
+                        print("DEBUG:", "match 2", m.group(0))
+                        m = re.match(REGEXP_PART1 + REGEXP_PART2 +
+                                     REGEXP_PART3,
                                      data)
                         if m:
-                            print("DEBUG:","match 3", m.group(0))
+                            print("DEBUG:", "match 3", m.group(0))
                             m = re.match(REGEXP_PART1 + REGEXP_PART2 +
                                          REGEXP_PART3 + REGEXP_PART4,
                                          data)
                             if m:
-                                print("DEBUG:","match 4", m.group(0))
+                                print("DEBUG:", "match 4", m.group(0))
                                 m = re.match(REGEXP_PART1 + REGEXP_PART2 +
                                              REGEXP_PART3 + REGEXP_PART4 +
                                              REGEXP_PART5,
                                              data)
                                 if m:
-                                    print("DEBUG:","match 5", m.group(0))
+                                    print("DEBUG:", "match 5", m.group(0))
                                     m = re.match(REGEXP_PART1 + REGEXP_PART2 +
                                                  REGEXP_PART3 + REGEXP_PART4 +
                                                  REGEXP_PART5 + REGEXP_PART6,
                                                  data)
                                     if m:
-                                        print("DEBUG:","match 6", m.group(0))
+                                        print("DEBUG:", "match 6", m.group(0))
