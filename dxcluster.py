@@ -38,9 +38,10 @@ class Spot(object):
     speed_unit - the unit of the speed, either WPM or BD
     type - the type of the spot, CQ, BEACON, ...
     time - the time of the spot. Four digits and a Z
+    time - the rest of the line, everything except spotter, freq, and dx
     """
 
-    def __init__(self, spotter, freq, dx, mode, speed_unit, t, time):
+    def __init__(self, spotter, freq, dx, mode, speed_unit, t, time, rest):
         self.spotter = spotter
         self.freq = freq
         self.dx = dx
@@ -48,6 +49,7 @@ class Spot(object):
         self.speed_unit = speed_unit
         self.type = t
         self.time = time
+        self.rest = rest
 
 
 def spots(call, address):
@@ -73,20 +75,22 @@ def spots(call, address):
             count = count + 1
             if count % 1000 == 0:
                 print(count, "spots filtered")
-            REGEXP_PART1 = r"DX de ([^:]*):\s+"
-            REGEXP_PART2 = r"([0-9]+(.[0-9]+)?)\s+"
-            REGEXP_PART3 = r"([^ ]+)\s+"
-            REGEXP_PART4 = r"(CW|PSK31|PSK63|RTTY)\s+"
+            # Contents matchers don't match whitespace
+            REGEXP_PART1 = r"DX de ([^: ]*):\s+"         # spotter
+            REGEXP_PART2 = r"([0-9]+(.[0-9]+)?)\s+"     # frequency
+            REGEXP_PART3 = r"([^ ]+)\s+"                # DX
+            REGEXP_PART4 = r"((CW|PSK31|PSK63|RTTY)\s+"  # Mode
             REGEXP_PART5 = r"-?[0-9]*\s+dB\s+"
             REGEXP_PART6 = r"[1-9][0-9]*\s+(WPM|BPS)\s+"
-            REGEXP_PART7 = r"(BEACON|CQ|DX|NCDXF B)\s+([0-9]*Z).*$"
+            REGEXP_PART7 = r"(BEACON|CQ|DX|NCDXF B)\s+([0-9]*Z).*)$"
             m = re.match(REGEXP_PART1 + REGEXP_PART2 + REGEXP_PART3 +
                          REGEXP_PART4 + REGEXP_PART5 + REGEXP_PART6 +
                          REGEXP_PART7,
                          data)
             if m:
                 yield Spot(m.group(1), float(m.group(2)), m.group(4),
-                           m.group(5), m.group(6), m.group(7), m.group(8))
+                           m.group(6), m.group(7), m.group(8), m.group(9),
+                           m.group(5).strip())
             else:
                 print("Not parsed", data)
                 m = re.match(REGEXP_PART1,
