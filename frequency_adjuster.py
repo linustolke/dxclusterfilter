@@ -57,6 +57,7 @@ by the offset of the spotter.
 
 """
 
+import csv
 import math
 import re
 import socket
@@ -91,38 +92,113 @@ class SpotAverage(object):
         self.spotters[spotter] = freq
         return statistics.mean(self.spotters.values())
 
-def band(freq):
-    # FIX: real calculation
-    return "ALL"
+def calc_band(freq):
+    if freq < 2000:
+        return "160m"
+    if freq < 4000:
+        return "80m"
+    if freq < 7500:
+        return "40m"
+    if freq < 11000:
+        return "30m"
+    if freq < 15000:
+        return "20m"
+    if freq < 19000:
+        return "17m"
+    if freq < 22000:
+        return "15m"
+    if freq < 25000:
+        return "12m"
+    if freq < 30000:
+        return "10m"
+    if freq < 52000:
+        return "6m"
+    return "OTHER"
 
 def top_adjustments(d):
     return sorted([(abs(adj), val, adj) for val,adj in d.items()],
                   reverse=True)[:3]
 
 
+class Trace(object):
+    """Remember log information and output it to a csv file."""
+    def __init__(self, filename):
+        self.filename = filename
+        self.rows = []
+        self.last_time = int(time.time())
+        self.dict = {}
+        self.count_fieldnames = {}
+
+    def _flush(self):
+        if self.dict:
+            self.dict["when"] = self.last_time
+            self.rows.append(self.dict)
+            self.dict = {}
+        
+    def trace(self, call, entry):
+        if call not in self.count_fieldnames:
+            self.count_fieldnames[call] = 0
+        self.count_fieldnames[call] = self.count_fieldnames[call] + 1
+        now = int(time.time())
+        if now != self.last_time:
+            self._flush()
+            self.last_time = now
+        self.dict[call] = entry
+        return
+
+    def dump(self):
+        self._flush()
+        with open(self.filename + ".csv", "w") as csvfile:
+            writer = csv.DictWriter(csvfile,
+                                    fieldnames=["when"] +
+                                    [call for call, entry
+                                     in sorted(self.count_fieldnames.items(),
+                                               key=lambda x: x[1],
+                                               reverse=True)])
+            writer.writeheader()
+            for row in self.rows:
+                writer.writerow(row)
+
+
 if __name__ == "__main__":
-    count = 0
-    dxes = dict()
-    spotter_adjustments = dict() # (str, band) => float
-    total = 0
-    for spot in dxcluster.spots(CALL, (HOST, PORT)):
-        count = count + 1
-        if count % 100 == 0:
-            print(count, "spots filtered", "total", len(dxes), "monitored")
-            print(top_adjustments(spotter_adjustments))
-            print("total drift:", total)
-        spotter_band = (spot.spotter, band(spot.freq))
-        if spotter_band not in spotter_adjustments:
-            spotter_adjustments[spotter_band] = 0.0
-        adjusted_frequency_1 = spot.freq + spotter_adjustments[spotter_band]
-        if spot.dx not in dxes:
-            dxes[spot.dx] = SpotAverage(spot.dx)
-        adjusted_frequency_2 = dxes[spot.dx].adjust(spot.spotter, adjusted_frequency_1)
-        freq_diff = adjusted_frequency_2 - spot.freq
-        total += freq_diff
-        adjusted_frequency_3 = adjusted_frequency_2 - total / 1000
-        spotter_adjustments[spotter_band] += (adjusted_frequency_2 - adjusted_frequency_1) / 10
-        spotout = spot.spotter + ":"
-        print(f"DX de {spotout:<15s}",
-              f"{adjusted_frequency_2:>9.3f}",
-              f"{spot.dx:<14}", spot.rest)
+    trace_spotters = {}
+    trace_dxes = {}
+    try:
+        count = 0
+        dxes = dict()
+        spotter_adjustments = dict() # (str, band) => float
+        total = 0
+        for spot in dxcluster.spots(CALL, (HOST, PORT)):
+            count = count + 1
+            if count % 100 == 0:
+                print(count, "spots filtered", "total", len(dxes), "monitored")
+                print(top_adjustments(spotter_adjustments))
+                print("total drift:", total)
+            band = calc_band(spot.freq)
+            spotter_band = (spot.spotter, band)
+            if spotter_band not in spotter_adjustments:
+                spotter_adjustments[spotter_band] = 0.0
+            adjusted_frequency_1 = spot.freq + spotter_adjustments[spotter_band]
+            if spot.dx not in dxes:
+                dxes[spot.dx] = SpotAverage(spot.dx)
+            adjusted_frequency_2 = dxes[spot.dx].adjust(spot.spotter, adjusted_frequency_1)
+            freq_diff = adjusted_frequency_2 - spot.freq
+            total += freq_diff
+            adjusted_frequency_3 = adjusted_frequency_2 - total / 1000
+            spotter_adjustments[spotter_band] += (adjusted_frequency_2 - adjusted_frequency_1) / 10
+            spotout = spot.spotter + ":"
+            print(f"DX de {spotout:<15s}",
+                  f"{adjusted_frequency_2:>9.3f}",
+                  f"{spot.dx:<14}", spot.rest)
+            if band not in trace_spotters:
+                trace_spotters[band] = Trace("spotters" + band)
+            trace_spotters[band].trace(" ".join(spotter_band),
+                                       spotter_adjustments[spotter_band])
+            if band not in trace_dxes:
+                trace_dxes[band] = Trace("dxes" + band)
+            trace_dxes[band].trace(spot.dx, adjusted_frequency_2)
+    finally:
+        for v in trace_spotters.values():
+            v.dump()
+        for v in trace_dxes.values():
+            v.dump()
