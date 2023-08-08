@@ -1,14 +1,20 @@
 #!/usr/bin/env python3
 
+from argparse import ArgumentParser
 import csv
 import time
 
 import dxcluster
 
+parser = ArgumentParser(description="Show a certain set of stations from reverse beacon network.")
+parser.add_argument('--file', type=str,
+                    help='The file where the calls to monitor are listed',
+                    default="ships.csv")
+
 class Interesting(object):
-    def __init__(self):
+    def __init__(self, filename):
         self.calls = dict()   # call/str => info/str
-        with open("ships.csv", newline="") as csvfile:
+        with open(filename, newline="") as csvfile:
             reader = csv.reader(csvfile, delimiter=',', quotechar='"')
             for row in reader:
                 call = row[0].strip()
@@ -53,14 +59,18 @@ class RecentlySeen(object):
 HOST = 'rbn.telegraphy.de'    # The remote host
 PORT = 7000              # The same port as used by the server
 CALL = 'SM5OUU'
-recently_seen = RecentlySeen()
-interesting = Interesting()
 
-for spot in dxcluster.spots(CALL, (HOST, PORT)):
-    if not interesting.accept(spot.dx):
-        continue
-    tup = (spot.dx, spot.freq,)
-    if recently_seen.is_seen(tup):
-        continue
-    info = interesting.info(spot.dx)
-    print(f"{spot.time:<6}{spot.dx:<9s}{spot.freq:>8}  {info}  (spotted by {spot.spotter})")
+if __name__ == '__main__':
+    args = parser.parse_args()
+
+    recently_seen = RecentlySeen()
+    interesting = Interesting(args.file)
+
+    for spot in dxcluster.spots(CALL, (HOST, PORT)):
+        if not interesting.accept(spot.dx):
+            continue
+        tup = (spot.dx, spot.freq,)
+        if recently_seen.is_seen(tup):
+            continue
+        info = interesting.info(spot.dx)
+        print(f"{spot.time:<6}{spot.dx:<9s}{spot.freq:>8}  {info}  (spotted by {spot.spotter})")
