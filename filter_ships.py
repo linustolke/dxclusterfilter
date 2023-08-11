@@ -2,18 +2,51 @@
 
 from argparse import ArgumentParser
 import csv
+import html_table_parser
+import re
+import urllib.request
 import time
 
 import dxcluster
 
 parser = ArgumentParser(description="Show a certain set of stations from reverse beacon network.")
+parser.add_argument('--url', type=str, default=None,
+                    help='The url to fetch with data')
 parser.add_argument('--file', type=str,
                     help='The file where the calls to monitor are listed',
                     default="ships.csv")
 
 class Interesting(object):
-    def __init__(self, filename):
+    def __init__(self):
         self.calls = dict()   # call/str => info/str
+
+    def from_url(self, url):
+        response = urllib.request.urlopen(url)
+        text = response.read().decode()
+        tp = html_table_parser.HTMLTableParser()
+        tp.feed(text)
+        for name, table in tp.named_tables.items():
+            print("Table", name)
+            call_column = None
+            for index, header in enumerate(table[0]):
+                if header in ["Call", "Call Sign", "Callsign"]:
+                    call_column = index
+            for row in table[1:]:
+                call = row[call_column].strip()
+                call = ''.join(list(filter(lambda c: c not in ['+', ' '],
+                                           call)))
+                info = ""
+                for index, value in enumerate(row):
+                    if index == call_column:
+                        continue
+                    if re.search("You need JavaScript enabled to view", value):
+                        continue
+                    info += " " + value.strip()
+                info = info.strip()
+                self.calls[call] = info
+                print("Showing", call, info)
+
+    def from_file(self, filename):
         with open(filename, newline="") as csvfile:
             reader = csv.reader(csvfile, delimiter=',', quotechar='"')
             for row in reader:
@@ -64,7 +97,11 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     recently_seen = RecentlySeen()
-    interesting = Interesting(args.file)
+    interesting = Interesting()
+    if args.url:
+        interesting.from_url(args.url)
+    else:
+        interesting.from_file(args.file)
 
     for spot in dxcluster.spots(CALL, (HOST, PORT)):
         if not interesting.accept(spot.dx):
