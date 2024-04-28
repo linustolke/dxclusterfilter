@@ -12,14 +12,16 @@ Author: Linus Tolke, SM5OUU
 
 Shows only certain spots with added information from another source.
 
-Used during Museum Ships weekend 2023 to get info when ships are
-calling CQ. The ships are in `ships.csv`, or give the ship name with
-`--file=file.csv`.
+Used during Museum Ships weekend and [International Lighthouse Lightship Weekend](https://illw.net/) to get info when ships are calling CQ.
+
+The ships for the Museum ships weekend 2023 are in `ships.csv`, or give the ship name with `--file=file.csv`.
 
 For the [International Lighthouse Lightship
 Weekend](https://illw.net/) 2023 this was improved with a possibility
 to get the information from the web page directly using the command
 `--url https://illw.net/index.php/entrants-list-2023`.
+
+For 2024, a possibility to monitor and filter FT8 received by wsjtx running on the same host.
 
 ## frequency_adjuster.py
 
@@ -31,3 +33,7 @@ frequency offset of the skimmers can be calculated and the frequency
 of the spots can be adjusted.
 
 Whether this works in practice remains to be tested.
+
+[comment]: <> (Local Variables:             )
+[comment]: <> (eval:(visual-line-mode 1)    )
+[comment]: <> (End:                         )
