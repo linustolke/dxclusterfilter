@@ -34,6 +34,6 @@ of the spots can be adjusted.
 
 Whether this works in practice remains to be tested.
 
-[comment]: <> (Local Variables:             )
-[comment]: <> (eval:(visual-line-mode 1)    )
-[comment]: <> (End:                         )
+<!-- Local Variables:             -->
+<!-- eval:(visual-line-mode 1)    -->
+<!-- End:                         -->
