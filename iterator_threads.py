@@ -32,10 +32,10 @@ if __name__ == "__main__":
     import random
     import time
 
-    def r():
+    def r(number):
         for x in range(10):
             time.sleep(random.random() * 10.0)
-            yield x
+            yield (number, x)
 
-    for x in chain(r(), r(), r(), r()):
+    for x in chain(*[r(n) for n in range(4)]):
         print(x)
