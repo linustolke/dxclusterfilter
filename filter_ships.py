@@ -7,7 +7,9 @@ import re
 import urllib.request
 import time
 
-import dxcluster
+import ft8
+import iterator_threads
+import rbn
 
 parser = ArgumentParser(description="Show a certain set of stations from reverse beacon network.")
 parser.add_argument('--url', type=str, default=None,
@@ -15,6 +17,8 @@ parser.add_argument('--url', type=str, default=None,
 parser.add_argument('--file', type=str,
                     help='The file where the calls to monitor are listed',
                     default="ships.csv")
+rbn.add_argument(parser)
+ft8.add_argument(parser)
 
 class Interesting(object):
     def __init__(self):
@@ -89,10 +93,6 @@ class RecentlySeen(object):
         return result
 
 
-HOST = 'rbn.telegraphy.de'    # The remote host
-PORT = 7000              # The same port as used by the server
-CALL = 'SM5OUU'
-
 if __name__ == '__main__':
     args = parser.parse_args()
 
@@ -103,7 +103,15 @@ if __name__ == '__main__':
     else:
         interesting.from_file(args.file)
 
-    for spot in dxcluster.spots(CALL, (HOST, PORT)):
+    spot_iterators = []
+    spot_iterators += rbn.add(args)
+    spot_iterators += ft8.add(args)
+
+    if not spot_iterators:
+        print("No indata specified")
+        exit(1)
+
+    for spot in iterator_threads.chain(*spot_iterators):
         if not interesting.accept(spot.dx):
             continue
         tup = (spot.dx, spot.freq,)

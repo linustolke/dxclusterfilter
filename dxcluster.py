@@ -63,9 +63,9 @@ def spots(call, address):
         s.connect(address)
 
         reader = _Reader(s)
-        print(reader.readline())
+        print(address, reader.readline())
         s.sendall(call.encode() + b'\r\n')
-        print(reader.readline())
+        print(address, reader.readline())
         s.sendall(b'set/raw\r\n')
         count = 0
         while True:
@@ -74,7 +74,7 @@ def spots(call, address):
                 break
             count = count + 1
             if count % 1000 == 0:
-                print(count, "spots filtered")
+                print(address, count, "spots filtered")
             # Contents matchers don't match whitespace
             REGEXP_PART1 = r"DX de ([^: ]*):\s+"         # spotter
             REGEXP_PART2 = r"([0-9]+(.[0-9]+)?)\s+"     # frequency
@@ -92,34 +92,34 @@ def spots(call, address):
                            m.group(6), m.group(7), m.group(8), m.group(9),
                            m.group(5).strip())
             else:
-                print("Not parsed", data)
+                print(address, "Not parsed", data)
                 m = re.match(REGEXP_PART1,
                              data)
                 if m:
-                    print("DEBUG:", "match 1", m.group(0))
+                    print("DEBUG:", address, "match 1", m.group(0))
                     m = re.match(REGEXP_PART1 + REGEXP_PART2,
                                  data)
                     if m:
-                        print("DEBUG:", "match 2", m.group(0))
+                        print("DEBUG:", address, "match 2", m.group(0))
                         m = re.match(REGEXP_PART1 + REGEXP_PART2 +
                                      REGEXP_PART3,
                                      data)
                         if m:
-                            print("DEBUG:", "match 3", m.group(0))
+                            print("DEBUG:", address, "match 3", m.group(0))
                             m = re.match(REGEXP_PART1 + REGEXP_PART2 +
                                          REGEXP_PART3 + REGEXP_PART4,
                                          data)
                             if m:
-                                print("DEBUG:", "match 4", m.group(0))
+                                print("DEBUG:", address, "match 4", m.group(0))
                                 m = re.match(REGEXP_PART1 + REGEXP_PART2 +
                                              REGEXP_PART3 + REGEXP_PART4 +
                                              REGEXP_PART5,
                                              data)
                                 if m:
-                                    print("DEBUG:", "match 5", m.group(0))
+                                    print("DEBUG:", address, "match 5", m.group(0))
                                     m = re.match(REGEXP_PART1 + REGEXP_PART2 +
                                                  REGEXP_PART3 + REGEXP_PART4 +
                                                  REGEXP_PART5 + REGEXP_PART6,
                                                  data)
                                     if m:
-                                        print("DEBUG:", "match 6", m.group(0))
+                                        print("DEBUG:", address, "match 6", m.group(0))
