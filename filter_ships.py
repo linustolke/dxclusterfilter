@@ -4,21 +4,24 @@ from argparse import ArgumentParser
 import csv
 import html_table_parser
 import re
-import urllib.request
+import sys
 import time
+import urllib.request
 
 import ft8
 import iterator_threads
 import rbn
 
-parser = ArgumentParser(description="Show a certain set of stations from reverse beacon network.")
+parser = ArgumentParser(description="Show and possibly filter heard and seen stations.")
 parser.add_argument('--url', type=str, default=None,
-                    help='The url to fetch with data')
+                    help='Show calls found in url.')
 parser.add_argument('--file', type=str,
-                    help='The file where the calls to monitor are listed',
-                    default="ships.csv")
+                    help='Show calls found in the file.',
+                    default=None)
 rbn.add_argument(parser)
 ft8.add_argument(parser)
+parser.add_argument('--recently', action='store_true', default=False,
+                    help='Show repeats')
 
 class Interesting(object):
     def __init__(self):
@@ -75,6 +78,8 @@ class RecentlySeen(object):
     TIME = 10 * 60 # Ten minutes
 
     def __init__(self):
+        print("Shows the same call on the same frequency only once every",
+              self.TIME / 60, "minutes.")
         self.seen = dict()  # tuple => time
         self.array = []     # tuple
 
@@ -96,11 +101,17 @@ class RecentlySeen(object):
 if __name__ == '__main__':
     args = parser.parse_args()
 
-    recently_seen = RecentlySeen()
-    interesting = Interesting()
+    if not args.recently:
+        recently_seen = RecentlySeen()
+    interesting = None
     if args.url:
+        interesting = Interesting()
         interesting.from_url(args.url)
-    else:
+    if args.file:
+        if interesting:
+            print("Cannot specify both url and file", file=sys.stderr)
+            sys.exit(1)
+        interesting = Interesting()
         interesting.from_file(args.file)
 
     spot_iterators = []
@@ -112,10 +123,13 @@ if __name__ == '__main__':
         exit(1)
 
     for spot in iterator_threads.chain(*spot_iterators):
-        if not interesting.accept(spot.dx):
-            continue
-        tup = (spot.dx, spot.freq,)
-        if recently_seen.is_seen(tup):
-            continue
-        info = interesting.info(spot.dx)
-        print(f"{spot.time:<6}{spot.dx:<9s}{spot.freq:>8}  {info}  (spotted by {spot.spotter})")
+        info = ""
+        if interesting:
+            if not interesting.accept(spot.dx):
+                continue
+            info = interesting.info(spot.dx)
+        if not args.recently:
+            tup = (spot.dx, spot.freq,)
+            if recently_seen.is_seen(tup):
+                continue
+        print(f"{spot.time:<6}{spot.dx:<9s}{spot.freq:>8} {spot.type:4} {info}  (spotted by {spot.spotter})")
