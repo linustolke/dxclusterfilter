@@ -27,6 +27,13 @@ class _Reader(object):
                 return None
             self.buffer += chunk.decode()
 
+    def readsomething(self):
+        if self.buffer:
+            buf = self.buffer
+            self.buffer = ''
+            return buf
+        return self.stream.recv(100).decode()
+
 
 def spots(call, address):
     """Yields spots from the DX cluster.
@@ -36,66 +43,45 @@ def spots(call, address):
     The address is given to socket.socket.connect
     """
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        print('Connecting to', address)
         s.connect(address)
 
         reader = _Reader(s)
-        print(address, reader.readline())
+        print(address, reader.readsomething())
         s.sendall(call.encode() + b'\r\n')
         print(address, reader.readline())
         s.sendall(b'set/raw\r\n')
         count = 0
-        while True:
-            data = reader.readline()
-            if data is None:
-                break
-            count = count + 1
-            if count % 1000 == 0:
-                print(address, count, "spots filtered")
-            # Contents matchers don't match whitespace
-            REGEXP_PART1 = r"DX de ([^: ]*):\s+"         # spotter
-            REGEXP_PART2 = r"([0-9]+(.[0-9]+)?)\s+"     # frequency
-            REGEXP_PART3 = r"([^ ]+)\s+"                # DX
-            REGEXP_PART4 = r"((CW|PSK31|PSK63|RTTY)\s+"  # Mode
-            REGEXP_PART5 = r"-?[0-9]*\s+dB\s+"
-            REGEXP_PART6 = r"[1-9][0-9]*\s+(WPM|BPS)\s+"
-            REGEXP_PART7 = r"(BEACON|CQ|DX|NCDXF B)\s+([0-9]*Z).*)$"
-            m = re.match(REGEXP_PART1 + REGEXP_PART2 + REGEXP_PART3 +
-                         REGEXP_PART4 + REGEXP_PART5 + REGEXP_PART6 +
-                         REGEXP_PART7,
-                         data)
-            if m:
-                yield spot.Spot(m.group(1), float(m.group(2)), m.group(4),
-                                m.group(6), m.group(7), m.group(8), m.group(9),
-                                m.group(5).strip())
-            else:
-                print(address, "Not parsed", data)
-                m = re.match(REGEXP_PART1,
-                             data)
+        try:
+            while True:
+                data = reader.readline().strip()
+                if data is None:
+                    break
+                count = count + 1
+                if count % 1000 == 0:
+                    print(address, count, "spots filtered")
+                    # Contents matchers don't match whitespace
+                REGEXP = (r"DX de ([^: ]*):\s+"         # 1 spotter
+                          + r"([0-9]+(.[0-9]+)?)\s+"    # 3 frequency
+                          + r"([^ ]+)\s+"               # 4 DX
+                          + r"(.*)$")                   # 5 Rest
+                m = re.match(REGEXP, data)
                 if m:
-                    print("DEBUG:", address, "match 1", m.group(0))
-                    m = re.match(REGEXP_PART1 + REGEXP_PART2,
-                                 data)
-                    if m:
-                        print("DEBUG:", address, "match 2", m.group(0))
-                        m = re.match(REGEXP_PART1 + REGEXP_PART2 +
-                                     REGEXP_PART3,
-                                     data)
-                        if m:
-                            print("DEBUG:", address, "match 3", m.group(0))
-                            m = re.match(REGEXP_PART1 + REGEXP_PART2 +
-                                         REGEXP_PART3 + REGEXP_PART4,
-                                         data)
-                            if m:
-                                print("DEBUG:", address, "match 4", m.group(0))
-                                m = re.match(REGEXP_PART1 + REGEXP_PART2 +
-                                             REGEXP_PART3 + REGEXP_PART4 +
-                                             REGEXP_PART5,
-                                             data)
-                                if m:
-                                    print("DEBUG:", address, "match 5", m.group(0))
-                                    m = re.match(REGEXP_PART1 + REGEXP_PART2 +
-                                                 REGEXP_PART3 + REGEXP_PART4 +
-                                                 REGEXP_PART5 + REGEXP_PART6,
-                                                 data)
-                                    if m:
-                                        print("DEBUG:", address, "match 6", m.group(0))
+                    rest = m.group(5)
+
+                    m_mode = re.search(r"(CW|PSK31|PSK63|RTTY)\s", rest)
+                    m_speed = re.search(r"[1-9][0-9]*\s+(WPM|BPS)\s", rest)
+                    m_type = re.search(r"\s(BEACON|CQ|DX|NCDXF B)\s", rest)
+                    m_time = re.search(r"\s([0-9]*Z)", rest)
+                    yield spot.Spot(m.group(1),
+                                    float(m.group(2)),
+                                    m.group(4),
+                                    m_mode.group(1) if m_mode else "",
+                                    m_speed.group(1) if m_speed else "",
+                                    m_type.group(1) if m_type else "",
+                                    m_time.group(1) if m_time else "",
+                                    m.group(5).strip())
+                else:
+                    print(address, "Not parsed", data, "using", REGEXP)
+        finally:
+            s.sendall(b'QUIT\r\n')

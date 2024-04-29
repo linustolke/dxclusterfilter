@@ -11,6 +11,7 @@ import urllib.request
 import ft8
 import iterator_threads
 import rbn
+import cluster
 
 parser = ArgumentParser(description="Show and possibly filter heard and seen stations.")
 parser.add_argument('--url', type=str, default=None,
@@ -20,6 +21,7 @@ parser.add_argument('--file', type=str,
                     default=None)
 rbn.add_argument(parser)
 ft8.add_argument(parser)
+cluster.add_argument(parser)
 parser.add_argument('--recently', action='store_true', default=False,
                     help='Show repeats')
 
@@ -117,6 +119,7 @@ if __name__ == '__main__':
     spot_iterators = []
     spot_iterators += rbn.add(args)
     spot_iterators += ft8.add(args)
+    spot_iterators += cluster.add(args)
 
     if not spot_iterators:
         print("No indata specified")
