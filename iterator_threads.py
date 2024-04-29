@@ -10,13 +10,16 @@ def chain(*iterables):
         try:
             for x in iterable:
                 q.put(x)
+        except Exception as e:
+            print(e)
+            raise e
         finally:
             q.put(end_token)
 
     threads = dict()
     for iter in iterables:
         token = object()
-        thread = threading.Thread(target=run, args=(iter, token))
+        thread = threading.Thread(target=run, args=(iter, token), daemon=True)
         threads[token] = thread
         thread.start()
 
