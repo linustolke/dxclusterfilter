@@ -12,26 +12,26 @@ import spot
 
 class _Reader(object):
     def __init__(self, stream):
-        self.buffer = ''
+        self.buffer = b''
         self.stream = stream
 
     def readline(self):
         while True:
-            end_of_line = self.buffer.find('\n')
+            end_of_line = self.buffer.find(b'\n')
             if end_of_line >= 0:
                 first_line = self.buffer[0:end_of_line]
                 self.buffer = self.buffer[end_of_line + 1:]
-                return first_line
+                return first_line.decode()
             chunk = self.stream.recv(2048)
             if not chunk:
                 return None
-            self.buffer += chunk.decode()
+            self.buffer += chunk
 
     def readsomething(self):
         if self.buffer:
             buf = self.buffer
-            self.buffer = ''
-            return buf
+            self.buffer = b''
+            return buf.decode()
         return self.stream.recv(100).decode()
 
 
