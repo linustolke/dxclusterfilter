@@ -51,6 +51,13 @@ def spots(call, address):
         s.sendall(call.encode() + b'\r\n')
         print(address, reader.readline())
         s.sendall(b'set/raw\r\n')
+        print(address, reader.readsomething())
+        s.sendall(b'unset/wcy\r\n')
+        print(address, reader.readsomething())
+        s.sendall(b'unset/wwv\r\n')
+        print(address, reader.readsomething())
+        s.sendall(b'unset/wx\r\n')
+        print(address, reader.readsomething())
         count = 0
         try:
             while True:
