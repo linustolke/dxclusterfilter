@@ -79,7 +79,7 @@ class SpotAverage(object):
     def adjust(self, spotter, freq):
         if spotter in self.spotters:
             offset = freq - self.spotters[spotter]
-            if abs(offset) > 0.01:
+            if abs(offset) > 0.05:
                 # QSY detected if one spotter moves it
                 self.spotters = dict()
                 print(self.dx, "qsy", offset)
@@ -165,7 +165,7 @@ if __name__ == "__main__":
     trace_dxes = {}
     try:
         count = 0
-        dxes = dict()
+        dxes = dict() # (call, band) => SpotAverage
         spotter_adjustments = dict() # (str, band) => float
         total = 0
         for spot in dxcluster.spots(CALL, (HOST, PORT)):
@@ -179,9 +179,10 @@ if __name__ == "__main__":
             if spotter_band not in spotter_adjustments:
                 spotter_adjustments[spotter_band] = 0.0
             adjusted_frequency_1 = spot.freq + spotter_adjustments[spotter_band]
-            if spot.dx not in dxes:
-                dxes[spot.dx] = SpotAverage(spot.dx)
-            adjusted_frequency_2 = dxes[spot.dx].adjust(spot.spotter, adjusted_frequency_1)
+            index = (spot.dx, band)
+            if index not in dxes:
+                dxes[index] = SpotAverage(spot.dx)
+            adjusted_frequency_2 = dxes[index].adjust(spot.spotter, adjusted_frequency_1)
             freq_diff = adjusted_frequency_2 - spot.freq
             total += freq_diff
             adjusted_frequency_3 = adjusted_frequency_2 - total / 1000
