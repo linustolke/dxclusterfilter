@@ -70,6 +70,8 @@ HOST = 'rbn.telegraphy.de'    # The remote host
 PORT = 7000              # The same port as used by the server
 CALL = 'SM5OUU'
 
+QSY_MIN_DISTANCE = 1.0
+
 class SpotAverage(object):
     """Keep the average of a certain spot"""
     def __init__(self, dx):
@@ -85,7 +87,7 @@ class SpotAverage(object):
                 print(self.dx, "qsy", offset)
         if len(self.spotters) > 0:
             offset = freq - statistics.mean(self.spotters.values())
-            if abs(offset) > 1:
+            if abs(offset) > QSY_MIN_DISTANCE:
                 # QSY detected by new spotter
                 self.spotters = dict()
                 print(self.dx, "qsy on new spotter", offset)
@@ -183,14 +185,22 @@ if __name__ == "__main__":
             if index not in dxes:
                 dxes[index] = SpotAverage(spot.dx)
             adjusted_frequency_2 = dxes[index].adjust(spot.spotter, adjusted_frequency_1)
-            freq_diff = adjusted_frequency_2 - spot.freq
-            total += freq_diff
-            adjusted_frequency_3 = adjusted_frequency_2 - total / 1000
-            spotter_adjustments[spotter_band] += (adjusted_frequency_2 - adjusted_frequency_1) / 10
             spotout = spot.spotter + ":"
             print(f"DX de {spotout:<15s}",
                   f"{adjusted_frequency_2:>9.3f}",
                   f"{spot.dx:<14}", spot.rest)
+
+            # Adjust the spotter
+            spotted_freq_diff = adjusted_frequency_2 - adjusted_frequency_1
+            spotter_adjustments[spotter_band] += spotted_freq_diff / 10
+
+            total_freq_diff = adjusted_frequency_2 - spot.freq
+            total += total_freq_diff
+            correction = total * total * total / 1000
+            if abs(correction) < QSY_MIN_DISTANCE:
+                spotter_adjustments[spotter_band] -= correction
+            total -= total / 10
+
             if band not in trace_spotters:
                 trace_spotters[band] = Trace("spotters" + band)
             trace_spotters[band].trace(" ".join(spotter_band),
