@@ -66,6 +66,7 @@ def spots():
                 5, # QSOLogged
                 6, # Close
                 8, # HaltTx
+                12, # LogQSO
         ]:
             # Packet type ignored
             pass
