@@ -18,10 +18,15 @@ class _Reader(object):
     def readline(self):
         while True:
             end_of_line = self.buffer.find(b'\n')
+            saved_buffer = self.buffer
             if end_of_line >= 0:
                 first_line = self.buffer[0:end_of_line]
                 self.buffer = self.buffer[end_of_line + 1:]
-                return first_line.decode()
+                try:
+                    return first_line.decode()
+                except UnicodeDecodeError as e:
+                    print('Error decoding', saved_buffer)
+                    raise
             chunk = self.stream.recv(2048)
             if not chunk:
                 return None
